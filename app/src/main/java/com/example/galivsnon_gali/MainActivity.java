@@ -35,6 +35,8 @@ public class MainActivity extends AppCompatActivity {
     String[] nonGali = {"ભગવાન", "સુગંધ" ,"સુંદર", "ધાર્મિક", "લોકપ્રિય", "પ્યાર"};
 
     String displayWord = "";
+    int gameRounds;
+    int wordIn = 0;
     int g_flag;
     int g_index;
     TextView question;
@@ -53,10 +55,11 @@ public class MainActivity extends AppCompatActivity {
     // MARK: Particle device
     private List<ParticleDevice> mDevice;
     private List<DevicesData> devices = new LinkedList<>();
-
+    TextView scorelbl;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+        gameRounds = 0;
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
@@ -67,6 +70,7 @@ public class MainActivity extends AppCompatActivity {
         // 2. Setup your device variable
         getDeviceFromCloud();
         setWord();
+        scorelbl = (TextView) findViewById(R.id.scoreLabel);
 
 
         Async.executeAsync(ParticleCloudSDK.getCloud(), new Async.ApiWork<ParticleCloud, Object>() {
@@ -84,8 +88,13 @@ public class MainActivity extends AppCompatActivity {
                                     if(devices.get(i).getDevice().getID().equals(particleId) && devices.get(i).isHasVoted() == false){
                                         devices.get(i).setHasVoted(true);
                                         devices.get(i).setVote(dataFromParticle);
-                                        Log.d("DataIn = " , "Id = " + devices.get(i).getDevice().getID() + " -- answer = " + devices.get(i).getVote());
                                     }
+                                }
+                                if(userStatus() == true && gameRounds <= 5){
+                                    checkAnswer();
+                                } else {
+                                    Log.d("Game", "Game Over");
+                                    scorelbl.setText("Game Over");
                                 }
                             }
                             public void onEventError(Exception e) {
@@ -107,36 +116,71 @@ public class MainActivity extends AppCompatActivity {
         });
     }
 
+    public boolean userStatus(){
+        int uiCnt = 0;
+        for(int i = 0; i < devices.size(); i++){
+            if(devices.get(i).isHasVoted() ==true){
+                uiCnt++;
+            }
+        }
+        if(uiCnt == devices.size()){
+            gameRounds++;
+            Log.d("RRRR", ""+gameRounds);
+        }
+        return (uiCnt == devices.size());
+    }
 
 
     public void setWord(){
-        Random r1 = new Random();
-        g_flag = r1.nextInt(2);
-        g_index = r1.nextInt(6);
-        if(g_flag == 0){
-            question.setText(gali[g_index]);
-            displayWord = gali[g_index];
-        }else{
-            question.setText(nonGali[g_index]);
-            displayWord = nonGali[g_index];
+        if(gameRounds <= 5) {
+            Log.d("GameRound",""+gameRounds);
+            Random r1 = new Random();
+            g_flag = r1.nextInt(2);
+            g_index = r1.nextInt(6);
+            if (g_flag == 0) {
+                question.setText(gali[g_index]);
+                displayWord = gali[g_index];
+            } else {
+                question.setText(nonGali[g_index]);
+                displayWord = nonGali[g_index];
+            }
+            Log.d("Gali", displayWord);
         }
-        Log.d("Gali", displayWord);
     }
 
-//    public boolean checkExistance(String type){
-//
-//        if(type.equals("0")){
-//            return Arrays.stream(gali).anyMatch("ભોસરીના"::equals);
-//        }
-//
-//        if(type.equals("1")){
-//            return Arrays.stream(nonGali).anyMatch("ભોસરીના"::equals);
-//        }
-//    }
-
+    public void checkExistance(){
+        if(Arrays.stream(gali).anyMatch(displayWord::equals)){
+            wordIn = 1;
+        }
+        if(Arrays.stream(nonGali).anyMatch(displayWord::equals)){
+            wordIn = 2;
+        }
+    }
     public void checkAnswer(){
+        checkExistance();
+        Log.d("DataIn", "Display Word = " + displayWord);
+        Log.d("DataIn", "Word In = " + wordIn);
+        scorelbl.setText("");
         for (int i = 0; i < devices.size(); i++){
-
+            int ans = Integer.parseInt(devices.get(i).getVote());
+            if(ans == wordIn){
+                devices.get(i).setScore(devices.get(i).getScore() + 1);
+                Log.d("DataIn", devices.get(i).getDevice().getID() + "You got it right...");
+            }
+            else{
+                Log.d("DataIn", devices.get(i).getDevice().getID() +"You got it wrong...");
+            }
+            Log.d("DataIn", "Score = " + devices.get(i).getScore());
+            Log.d("DataIn" , "Id = " + devices.get(i).getDevice().getName() + " -- answer = " + devices.get(i).getVote());
+            scorelbl.setText(scorelbl.getText() + "Particle Id =" + devices.get(i).getDevice().getName() + " - Score = " +  devices.get(i).getScore() + "\n");
+            devices.get(i).setVote("0");
+            devices.get(i).setHasVoted(false);
+            runOnUiThread(new Thread(new Runnable() {
+                @Override
+                public void run() {
+                        setWord();
+                }
+            }));
         }
     }
 
@@ -178,7 +222,7 @@ public class MainActivity extends AppCompatActivity {
                 // 2. build a list and put the r,g,b into the list
                 List<String> functionParameters = new ArrayList<String>();
                 functionParameters.add(commandToSend);
-                for (int i = 0; i < devices.size(); i++) {
+                for (int i = 0; i <= devices.size(); i++) {
                     try {
                         devices.get(i).getDevice().callFunction("colors", functionParameters);
                         //mDevice.callFunction("colors", functionParameters);
