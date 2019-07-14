@@ -157,6 +157,7 @@ public class MainActivity extends AppCompatActivity {
         }
     }
     public void checkAnswer(){
+        String cmdts = "";
         checkExistance();
         Log.d("DataIn", "Display Word = " + displayWord);
         Log.d("DataIn", "Word In = " + wordIn);
@@ -166,22 +167,30 @@ public class MainActivity extends AppCompatActivity {
             if(ans == wordIn){
                 devices.get(i).setScore(devices.get(i).getScore() + 1);
                 Log.d("DataIn", devices.get(i).getDevice().getID() + "You got it right...");
+                cmdts = "0,255,0";
+
             }
             else{
                 Log.d("DataIn", devices.get(i).getDevice().getID() +"You got it wrong...");
+                cmdts = "255,0,0";
+                changeColorsPressed(cmdts);
             }
+
             Log.d("DataIn", "Score = " + devices.get(i).getScore());
             Log.d("DataIn" , "Id = " + devices.get(i).getDevice().getName() + " -- answer = " + devices.get(i).getVote());
-            scorelbl.setText(scorelbl.getText() + "Particle Id =" + devices.get(i).getDevice().getName() + " - Score = " +  devices.get(i).getScore() + "\n");
+            scorelbl.setText(scorelbl.getText() + "Particle Name =" + devices.get(i).getDevice().getName() + " - Score = " +  devices.get(i).getScore() + "\n");
             devices.get(i).setVote("0");
             devices.get(i).setHasVoted(false);
             runOnUiThread(new Thread(new Runnable() {
                 @Override
                 public void run() {
-                        setWord();
+                    setWord();
                 }
             }));
+
+            changeColorsPressed(cmdts);
         }
+
     }
 
     public void getDeviceFromCloud() {
@@ -213,15 +222,14 @@ public class MainActivity extends AppCompatActivity {
         });
     }
 
-    public void changeColorsPressed(View view) {
+    public void changeColorsPressed(String cmd) {
         // logic goes here
-        String commandToSend = 255 + "," + 0 + "," + 0;
         Async.executeAsync(ParticleCloudSDK.getCloud(), new Async.ApiWork<ParticleCloud, Object>() {
             @Override
             public Object callApi(@NonNull ParticleCloud particleCloud) throws ParticleCloudException, IOException {
                 // 2. build a list and put the r,g,b into the list
                 List<String> functionParameters = new ArrayList<String>();
-                functionParameters.add(commandToSend);
+                functionParameters.add(cmd);
                 for (int i = 0; i <= devices.size(); i++) {
                     try {
                         devices.get(i).getDevice().callFunction("colors", functionParameters);
